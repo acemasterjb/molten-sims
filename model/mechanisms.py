@@ -2,6 +2,8 @@ from datetime import datetime
 from random import uniform
 from typing import Any
 
+from .state_variables import initial_state
+
 
 def deposit_into_funder_account(
     sys_params: dict[str, Any],
@@ -34,8 +36,6 @@ def deposit_into_funder_account(
     agent_opts_to_not_deposit = depositer["probabilities"]["deposit"] < dice_roll
     if agent_opts_to_not_deposit:
         return default
-
-    depositer = agents[i_funder]
 
     funder_address = depositer["address"]
     deposit_amount = depositer["DAI"]
@@ -91,11 +91,11 @@ def deposit_and_update_total(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = sys_params["agents"]
+    agents: list[dict[str, Any]] = current_state["agents"]
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
         substep_criteria_met = (
-            sys_params["agents"][i_agent]["DAI"] == 0
+            current_state["agents"][i_agent]["DAI"] == 0
             and current_state["deposited"][agents[i_agent]["address"]] > 0
         )
         if substep_criteria_met:
@@ -105,10 +105,7 @@ def deposit_and_update_total(
     if i_funder < 0:
         return default
 
-    depositer = agents[i_funder]
-    deposit_amount = depositer["DAI"]
-
-    sys_params["agents"][i_funder]["DAI"] = 0
+    deposit_amount = initial_state["agents"][i_funder]["DAI"]
 
     return ("totalDeposited", current_state["totalDeposited"] + deposit_amount)
 

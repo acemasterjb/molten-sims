@@ -1,6 +1,7 @@
 from .mechanisms import (
     claim,
     claimMTokens,
+    deposit_and_deplete_DAI,
     deposit_and_update_total,
     deposit_into_funder_account,
     exchange,
@@ -23,8 +24,9 @@ block_step_1 = [
     {
         "policies": {"deposit_policy": deposit_policy, "refund_policy": refund_policy},
         "variables": {
-            "deposit_update_total": deposit_and_update_total,
             "deposit_into_funder": deposit_into_funder_account,
+            "deposit_deplete_dai": deposit_and_deplete_DAI,
+            "deposit_update_total": deposit_and_update_total,
             "refund": refund,
         },
     }

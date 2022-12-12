@@ -41,3 +41,6 @@ def init_state(n_agents: int = 10) -> dict[str, Any]:
             }
         )
     return genesis_state
+
+
+initial_state = init_state()
