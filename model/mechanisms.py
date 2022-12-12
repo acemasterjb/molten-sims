@@ -21,9 +21,11 @@ def deposit_into_funder_account(
     agents: list[dict[str, Any]] = current_state["agents"]
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
+        agent_address = agents[i_agent]["address"]
+        deposits = current_state["deposited"]
+
         substep_criteria_met = (
-            agents[i_agent]["DAI"] > 0
-            and current_state["deposited"][agents[i_agent]["address"]] == 0
+            agents[i_agent]["DAI"] > 0 and deposits[agent_address] == 0
         )
         if substep_criteria_met:
             i_funder = i_agent
@@ -40,15 +42,12 @@ def deposit_into_funder_account(
     funder_address = depositer["address"]
     deposit_amount = depositer["DAI"]
 
-    return (
-        "deposited",
-        current_state["deposited"].update(
-            {
-                funder_address: current_state["deposited"][funder_address]
-                + deposit_amount
-            }
-        ),
+    current_deposits = current_state["deposited"]
+    current_deposits.update(
+        {funder_address: current_state["deposited"][funder_address] + deposit_amount}
     )
+
+    return ("deposited", current_deposits)
 
 
 def deposit_and_deplete_DAI(
@@ -145,15 +144,12 @@ def refund_funder_account(
     funder_address = refunder["address"]
     to_be_refunded = current_state["deposited"][funder_address]
 
-    return (
-        "deposited",
-        current_state["deposited"].update(
-            {
-                funder_address: current_state["deposited"][funder_address]
-                - to_be_refunded
-            }
-        ),
+    current_deposits = current_state["deposited"]
+    current_deposits.update(
+        {funder_address: current_state["deposited"][funder_address] - to_be_refunded}
     )
+
+    return ("deposited", current_deposits)
 
 
 def refund_and_credit_DAI(
@@ -242,7 +238,6 @@ def exchange(
         / sys_params["exchange_rate"][0]
     )
     sys_params["DAO_treasury"][0]["daoToken_balance"] -= dao_token_balance_delta
-    # current_state["daoToken_balance"] += dao_token_balance_delta
     return (
         "daoToken_balance",
         current_state["daoToken_balance"] + dao_token_balance_delta,
