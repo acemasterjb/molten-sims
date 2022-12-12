@@ -16,10 +16,14 @@ def deposit_into_funder_account(
 
     dice_roll = uniform(0.1, 0.9)
 
-    agents: list[dict[str, Any]] = sys_params["agents"]
+    agents: list[dict[str, Any]] = current_state["agents"]
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
-        if sys_params["agents"][i_agent]["DAI"] > 0:
+        substep_criteria_met = (
+            agents[i_agent]["DAI"] > 0
+            and current_state["deposited"][agents[i_agent]["address"]] == 0
+        )
+        if substep_criteria_met:
             i_funder = i_agent
             break
 
@@ -31,11 +35,11 @@ def deposit_into_funder_account(
     if agent_opts_to_not_deposit:
         return default
 
+    depositer = agents[i_funder]
+
     funder_address = depositer["address"]
     deposit_amount = depositer["DAI"]
 
-    sys_params["agents"][i_funder]["DAI"] = 0
-    current_state["deposited"][funder_address] = deposit_amount
     return (
         "deposited",
         current_state["deposited"].update(
@@ -45,6 +49,35 @@ def deposit_into_funder_account(
             }
         ),
     )
+
+
+def deposit_and_deplete_DAI(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    default = ("agents", current_state["agents"])
+    if policy_inputs["step"] != "depositing":
+        return default
+
+    agents: list[dict[str, Any]] = current_state["agents"]
+    i_funder = -1
+    for i_agent in range(0, len(agents) - 1):
+        substep_criteria_met = (
+            agents[i_agent]["DAI"] > 0
+            and current_state["deposited"][agents[i_agent]["address"]] > 0
+        )
+        if substep_criteria_met:
+            i_funder = i_agent
+            break
+
+    if i_funder < 0:
+        return default
+
+    agents[i_funder]["DAI"] = 0
+    return ("agents", agents)
 
 
 def deposit_and_update_total(
@@ -61,7 +94,11 @@ def deposit_and_update_total(
     agents: list[dict[str, Any]] = sys_params["agents"]
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
-        if sys_params["agents"][i_agent]["DAI"] > 0:
+        substep_criteria_met = (
+            sys_params["agents"][i_agent]["DAI"] == 0
+            and current_state["deposited"][agents[i_agent]["address"]] > 0
+        )
+        if substep_criteria_met:
             i_funder = i_agent
             break
 
@@ -111,7 +148,6 @@ def refund(
 
     current_state["deposited"][refunder_address] = 0
     sys_params["agents"][i_refunder]["DAI"] += to_be_refunded
-    # return ("totalDeposited", current_state["totalDeposited"] - to_be_refunded)
 
 
 def exchange(
