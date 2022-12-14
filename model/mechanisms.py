@@ -21,9 +21,11 @@ def deposit_into_funder_account(
     agents: list[dict[str, Any]] = current_state["agents"]
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
+        agent_address = agents[i_agent]["address"]
+        deposits = current_state["deposited"]
+
         substep_criteria_met = (
-            agents[i_agent]["DAI"] > 0
-            and current_state["deposited"][agents[i_agent]["address"]] == 0
+            agents[i_agent]["DAI"] > 0 and deposits[agent_address] == 0
         )
         if substep_criteria_met:
             i_funder = i_agent
@@ -40,15 +42,12 @@ def deposit_into_funder_account(
     funder_address = depositer["address"]
     deposit_amount = depositer["DAI"]
 
-    return (
-        "deposited",
-        current_state["deposited"].update(
-            {
-                funder_address: current_state["deposited"][funder_address]
-                + deposit_amount
-            }
-        ),
+    current_deposits = current_state["deposited"]
+    current_deposits.update(
+        {funder_address: current_state["deposited"][funder_address] + deposit_amount}
     )
+
+    return ("deposited", current_deposits)
 
 
 def deposit_and_deplete_DAI(
@@ -110,7 +109,79 @@ def deposit_and_update_total(
     return ("totalDeposited", current_state["totalDeposited"] + deposit_amount)
 
 
-def refund(
+def refund_funder_account(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    default = ("deposited", current_state["deposited"])
+    if policy_inputs["step"] != "depositing":
+        return default
+
+    dice_roll = uniform(0.1, 0.9)
+
+    agents: list[dict[str, Any]] = current_state["agents"]
+    i_funder = -1
+    for i_agent in range(0, len(agents) - 1):
+        substep_criteria_met = (
+            agents[i_agent]["DAI"] == 0
+            and current_state["deposited"][agents[i_agent]["address"]] > 0
+        )
+        if substep_criteria_met:
+            i_funder = i_agent
+            break
+
+    if i_funder < 0:
+        return default
+
+    refunder = agents[i_funder]
+    agent_opts_to_not_deposit = refunder["probabilities"]["refund"] < dice_roll
+    if agent_opts_to_not_deposit:
+        return default
+
+    funder_address = refunder["address"]
+    to_be_refunded = current_state["deposited"][funder_address]
+
+    current_deposits = current_state["deposited"]
+    current_deposits.update(
+        {funder_address: current_state["deposited"][funder_address] - to_be_refunded}
+    )
+
+    return ("deposited", current_deposits)
+
+
+def refund_and_credit_DAI(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    default = ("agents", current_state["agents"])
+    if policy_inputs["step"] != "depositing":
+        return default
+
+    agents: list[dict[str, Any]] = current_state["agents"]
+    i_funder = -1
+    for i_agent in range(0, len(agents) - 1):
+        substep_criteria_met = (
+            agents[i_agent]["DAI"] == 0
+            and current_state["deposited"][agents[i_agent]["address"]] == 0
+        )
+        if substep_criteria_met:
+            i_funder = i_agent
+            break
+
+    if i_funder < 0:
+        return default
+
+    agents[i_funder]["DAI"] = initial_state["agents"][i_funder]["DAI"]
+    return ("agents", agents)
+
+
+def refund_and_update_total(
     sys_params: dict[str, Any],
     substep: int,
     _,
@@ -121,30 +192,23 @@ def refund(
     if policy_inputs["step"] != "depositing":
         return default
 
-    dice_roll = uniform(0.1, 0.9)
-
-    agents: list[dict[str, Any]] = sys_params["agents"]
-    i_refunder = -1
+    agents: list[dict[str, Any]] = current_state["agents"]
+    i_funder = -1
     for i_agent in range(0, len(agents) - 1):
-        if agents[i_agent]["DAI"] == 0:
-            i_refunder = i_agent
+        substep_criteria_met = (
+            current_state["agents"][i_agent]["DAI"] > 0
+            and current_state["deposited"][agents[i_agent]["address"]] == 0
+        )
+        if substep_criteria_met:
+            i_funder = i_agent
             break
 
-    if i_refunder < 0:
+    if i_funder < 0:
         return default
 
-    refunder = agents[i_refunder]
-    agent_opts_to_not_refund = refunder["probabilities"]["refund"] < dice_roll
-    if agent_opts_to_not_refund:
-        return default
+    to_be_refunded = initial_state["agents"][i_funder]["DAI"]
 
-    refunder_address = refunder["address"]
-    to_be_refunded = current_state["deposited"][refunder_address]
-    if to_be_refunded == 0:
-        return default
-
-    current_state["deposited"][refunder_address] = 0
-    sys_params["agents"][i_refunder]["DAI"] += to_be_refunded
+    return ("totalDeposited", current_state["totalDeposited"] - to_be_refunded)
 
 
 def exchange(
@@ -174,7 +238,6 @@ def exchange(
         / sys_params["exchange_rate"][0]
     )
     sys_params["DAO_treasury"][0]["daoToken_balance"] -= dao_token_balance_delta
-    # current_state["daoToken_balance"] += dao_token_balance_delta
     return (
         "daoToken_balance",
         current_state["daoToken_balance"] + dao_token_balance_delta,
