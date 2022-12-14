@@ -4,7 +4,12 @@ from .mechanisms import (
     deposit_and_deplete_DAI,
     deposit_and_update_total,
     deposit_into_funder_account,
-    exchange,
+    exchange_charge_dao,
+    exchange_receive_deposit_token,
+    exchange_send_mTokens,
+    exchange_set_exchange_time,
+    exchange_transfer_to_dao,
+    exchange_transfer_to_molten,
     liquidate,
     refund_and_credit_DAI,
     refund_and_update_total,
@@ -26,9 +31,9 @@ block_step_1 = [
     {
         "policies": {"deposit_policy": deposit_policy},
         "variables": {
-            "deposit_into_funder": deposit_into_funder_account,
-            "deposit_deplete_dai": deposit_and_deplete_DAI,
-            "deposit_update_total": deposit_and_update_total,
+            "step_1": deposit_into_funder_account,
+            "step_2": deposit_and_deplete_DAI,
+            "step_3": deposit_and_update_total,
         },
     }
     for _ in range(0, 9)
@@ -36,11 +41,11 @@ block_step_1 = [
 
 block_step_2 = [
     {
-        "policies": {"deposit_policy": refund_policy},
+        "policies": {"refund_policy": refund_policy},
         "variables": {
-            "deposit_into_funder": refund_funder_account,
-            "deposit_deplete_dai": refund_and_credit_DAI,
-            "deposit_update_total": refund_and_update_total,
+            "step_1": refund_funder_account,
+            "step_2": refund_and_credit_DAI,
+            "step_3": refund_and_update_total,
         },
     }
     for _ in range(0, 9)
@@ -49,14 +54,21 @@ block_step_2 = [
 block_step_3 = [
     {
         "policies": {"exchange_policy": exchange_policy},
-        "variables": {"exchange": exchange},
+        "variables": {
+            "step_1": exchange_set_exchange_time,
+            "step_2": exchange_send_mTokens,
+            "step_3": exchange_transfer_to_dao,
+            "step_1": exchange_charge_dao,
+            "step_2": exchange_transfer_to_molten,
+            "step_3": exchange_receive_deposit_token,
+        },
     }
 ]
 
 block_step_4 = [
     {
         "policies": {"claimMTokens_policy": claimMTokens_policy},
-        "variables": {"claimMTokens": claimMTokens},
+        "variables": {"step_1": claimMTokens},
     }
     for _ in range(0, 9)
 ]
@@ -67,7 +79,7 @@ block_step_5 = [
             "vote_liquidate_policicy": vote_liquidate_policy,
             "liquidate_policy": liquidate_policy,
         },
-        "variables": {"vote_liquidate": vote_liquidate, "liquidate": liquidate},
+        "variables": {"step_1": vote_liquidate, "step_2": liquidate},
     }
     for _ in range(0, 9)
 ]
@@ -75,7 +87,7 @@ block_step_5 = [
 block_step_6 = [
     {
         "policies": {"claim_policy": claim_policy},
-        "variables": {"claim": claim},
+        "variables": {"step_1": claim},
     }
     for _ in range(0, 9)
 ]
