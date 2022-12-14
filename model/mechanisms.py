@@ -19,13 +19,14 @@ def deposit_into_funder_account(
     dice_roll = uniform(0.1, 0.9)
 
     agents: list[dict[str, Any]] = current_state["agents"]
+    current_deposits = current_state["deposited"].copy()
+
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
         agent_address = agents[i_agent]["address"]
-        deposits = current_state["deposited"]
 
         substep_criteria_met = (
-            agents[i_agent]["DAI"] > 0 and deposits[agent_address] == 0
+            agents[i_agent]["DAI"] > 0 and current_deposits[agent_address] == 0
         )
         if substep_criteria_met:
             i_funder = i_agent
@@ -42,9 +43,8 @@ def deposit_into_funder_account(
     funder_address = depositer["address"]
     deposit_amount = depositer["DAI"]
 
-    current_deposits = current_state["deposited"]
     current_deposits.update(
-        {funder_address: current_state["deposited"][funder_address] + deposit_amount}
+        {funder_address: current_deposits[funder_address] + deposit_amount}
     )
 
     return ("deposited", current_deposits)
@@ -61,7 +61,7 @@ def deposit_and_deplete_DAI(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = current_state["agents"]
+    agents: list[dict[str, Any]] = current_state["agents"].copy()
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
         substep_criteria_met = (
@@ -144,7 +144,7 @@ def refund_funder_account(
     funder_address = refunder["address"]
     to_be_refunded = current_state["deposited"][funder_address]
 
-    current_deposits = current_state["deposited"]
+    current_deposits = current_state["deposited"].copy()
     current_deposits.update(
         {funder_address: current_state["deposited"][funder_address] - to_be_refunded}
     )
@@ -163,7 +163,7 @@ def refund_and_credit_DAI(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = current_state["agents"]
+    agents: list[dict[str, Any]] = current_state["agents"].copy()
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
         substep_criteria_met = (
@@ -192,11 +192,11 @@ def refund_and_update_total(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = current_state["agents"]
+    agents: list[dict[str, Any]] = policy_inputs["agents"]
     i_funder = -1
     for i_agent in range(0, len(agents) - 1):
         substep_criteria_met = (
-            current_state["agents"][i_agent]["DAI"] > 0
+            agents[i_agent]["DAI"] > 0
             and current_state["deposited"][agents[i_agent]["address"]] == 0
         )
         if substep_criteria_met:
@@ -211,7 +211,20 @@ def refund_and_update_total(
     return ("totalDeposited", current_state["totalDeposited"] - to_be_refunded)
 
 
-def exchange(
+def exchange_set_exchange_time(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    if policy_inputs["step"] != "exchanging":
+        return ("exchangeTime", 0)
+
+    return ("exchangeTime", datetime.utcnow().replace(microsecond=0).timestamp())
+
+
+def exchange_send_mTokens(
     sys_params: dict[str, Any],
     substep: int,
     _,
@@ -221,27 +234,90 @@ def exchange(
     if policy_inputs["step"] != "exchanging":
         return ("daoToken_balance", current_state["daoToken_balance"])
 
-    current_state["exchangeTime"] = datetime.utcnow().replace(microsecond=0).timestamp()
     total_deposited = current_state["totalDeposited"]
-    current_state["mToken_balance"] = (
+
+    return (
+        "mToken_balance",
         total_deposited
-        * 10 ** sys_params["mtoken_decimals"][0]
-        / sys_params["exchange_rate"][0]
+        * 10 ** sys_params["mToken_decimals"]
+        / sys_params["exchange_rate"],
     )
 
-    current_state["totalDeposited"] = 0
-    sys_params["DAO_treasury"][0]["depositToken_balance"] += total_deposited
 
+def exchange_transfer_to_dao(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    if policy_inputs["step"] != "exchanging":
+        return ("daoToken_balance", current_state["daoToken_balance"])
+
+    treasury = current_state["DAO_treasury"].copy()
+    treasury["depositToken_balance"] += current_state["totalDeposited"]
+    return ("DAO_treasury", treasury)
+
+
+def exchange_transfer_to_molten(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    if policy_inputs["step"] != "exchanging":
+        return ("daoToken_balance", current_state["daoToken_balance"])
+
+    total_deposited = current_state["totalDeposited"]
     dao_token_balance_delta = (
         total_deposited
-        * 10 ** sys_params["daoToken_decimals"][0]
-        / sys_params["exchange_rate"][0]
+        * 10 ** sys_params["daoToken_decimals"]
+        / sys_params["exchange_rate"]
     )
-    sys_params["DAO_treasury"][0]["daoToken_balance"] -= dao_token_balance_delta
+
     return (
         "daoToken_balance",
         current_state["daoToken_balance"] + dao_token_balance_delta,
     )
+
+
+def exchange_charge_dao(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    if policy_inputs["step"] != "exchanging":
+        return ("daoToken_balance", current_state["daoToken_balance"])
+
+    total_deposited = current_state["totalDeposited"]
+    dao_token_balance_delta = (
+        total_deposited
+        * 10 ** sys_params["daoToken_decimals"]
+        / sys_params["exchange_rate"]
+    )
+
+    treasury = current_state["DAO_treasury"].copy()
+    treasury["daoToken_balance"] -= dao_token_balance_delta
+
+    # print(dao_token_balance_delta)
+
+    return ("DAO_treasury", treasury)
+
+
+def exchange_receive_deposit_token(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    if policy_inputs["step"] != "exchanging":
+        return ("daoToken_balance", current_state["daoToken_balance"])
+
+    return ("totalDeposited", 0)
 
 
 def claimMTokens(

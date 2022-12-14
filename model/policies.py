@@ -20,7 +20,12 @@ def refund_policy(
     current_state: dict[str, Any],
 ):
     if current_state["exchangeTime"] == 0:
-        return {"step": "depositing"}
+        agents: list[dict[str, Any]] = current_state["agents"]
+        agents_to_keep = []
+        for agent in agents:
+            if agent["DAI"] == 0:
+                agents_to_keep.append(agent)
+        return {"step": "depositing", "agents": agents_to_keep}
     return {"action": "continue"}
     
 
@@ -32,15 +37,11 @@ def exchange_policy(
     current_state: dict[str, Any],
 ):
     exchange_criteria_met = (
-        current_state["exchangeTime"] == 0 and current_state["totalDeposted"] > 0
+        current_state["exchangeTime"] == 0 and current_state["totalDeposited"] > 0
     )
     if exchange_criteria_met:
-        agents = sys_params["agents"]
-        for i_agent in range(0, len(agents) - 1):
-            if agents[i_agent]["DAI"] != 0:
-                del sys_params["agents"][i_agent]
         return {"step": "exchanging"}
-    return {"action": "continue"}
+    return {"step": "depositing"}
     
 
 
