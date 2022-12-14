@@ -11,13 +11,13 @@ del configs[:]
 sim_config = config_sim(
     {
         "N": 1,  # no. of sim runs
-        "T": range(70),  # no. of timesteps; 14s * 5 blocks
+        "T": range(1),  # no. of timesteps; 14s * 5 blocks
         "M": params,
     }
 )
 
 exp = Experiment()
-exp.append_configs(
+exp.append_model(
     sim_configs=sim_config,
     initial_state=initial_state,
     partial_state_update_blocks=partial_state_update_block,

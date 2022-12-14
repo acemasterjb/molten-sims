@@ -17,8 +17,12 @@ genesis_state = {
     "votedForLiquidation": init_bool_state.copy(),
     "totalVotedForLiquidation": 0,
     "mToken_balance": 0,
-    "depositToken_balance": 0,
     "daoToken_balance": 0,
+    "DAO_treasury": {
+        "address": "0x01",
+        "daoToken_balance": 2e9 * 10 ** 18,
+        "depositToken_balance": 0,
+    },
     "agents": [],
 }
 
