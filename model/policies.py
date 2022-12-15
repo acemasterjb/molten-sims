@@ -10,7 +10,7 @@ def deposit_policy(
 ):
     if current_state["exchangeTime"] == 0:
         return {"step": "depositing"}
-    return {"action": "continue"}
+    return {"step": "continue"}
 
 
 def refund_policy(
@@ -26,8 +26,7 @@ def refund_policy(
             if agent["DAI"] == 0:
                 agents_to_keep.append(agent)
         return {"step": "depositing", "agents": agents_to_keep}
-    return {"action": "continue"}
-    
+    return {"step": "continue"}
 
 
 def exchange_policy(
@@ -36,13 +35,24 @@ def exchange_policy(
     _,
     current_state: dict[str, Any],
 ):
-    exchange_criteria_met = (
-        current_state["exchangeTime"] == 0 and current_state["totalDeposited"] > 0
-    )
+    deposit_started = False
+    for agent in current_state["agents"]:
+        if agent["DAI"] == 0:
+            deposit_started = True
+            break
+
+    daoBalance_can_be_charged = current_state["DAO_treasury"]["daoToken_balance"] > 0
+
+    exchange_possible = (
+        deposit_started or current_state["exchangeTime"] == 0
+    ) and daoBalance_can_be_charged
+    exchange_criteria_met = exchange_possible and current_state["totalDeposited"] > 0
+
     if exchange_criteria_met:
         return {"step": "exchanging"}
-    return {"step": "depositing"}
-    
+    if current_state["exchangeTime"] > 0:
+        return {"step": "post-exchange"}
+    return {"step": "continue"}
 
 
 def claimMTokens_policy(
@@ -53,8 +63,7 @@ def claimMTokens_policy(
 ):
     if current_state["exchangeTime"] > 0:
         return {"step": "post-exchange"}
-    return {"action": "continue"}
-    
+    return {"step": "continue"}
 
 
 def vote_liquidate_policy(
@@ -71,7 +80,6 @@ def vote_liquidate_policy(
     if has_claimed >= 5 and current_state["exchangeTime"] > 0:
         return {"step": "post-exchange"}
     return {"action": "continue"}
-    
 
 
 def liquidate_policy(
@@ -89,7 +97,6 @@ def liquidate_policy(
         )
         return {"step": "unanimous liquidation vote"}
     return {"action": "continue"}
-    
 
 
 def claim_policy(
@@ -101,4 +108,3 @@ def claim_policy(
     if current_state["liquidationTime"] > 0:
         return {"step": "post-liquidation"}
     return {"action": "continue"}
-    
