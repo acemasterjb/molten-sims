@@ -218,8 +218,8 @@ def exchange_set_exchange_time(
     current_state: dict[str, Any],
     policy_inputs: dict[str, Any],
 ):
-    if policy_inputs["step"] != "exchanging":
-        return ("exchangeTime", 0)
+    if policy_inputs["step"] is not "exchanging":
+        return ("exchangeTime", current_state["exchangeTime"])
 
     return ("exchangeTime", datetime.utcnow().replace(microsecond=0).timestamp())
 
@@ -320,23 +320,23 @@ def exchange_receive_deposit_token(
     return ("totalDeposited", 0)
 
 
-def claimMTokens(
+def claimMTokens_set_claimed(
     sys_params: dict[str, Any],
     substep: int,
     _,
     current_state: dict[str, Any],
     policy_inputs: dict[str, Any],
 ):
-    default = ("mtokensClaimed", current_state["mtokensClaimed"])
+    default = ("mTokensClaimed", current_state["mTokensClaimed"])
     if policy_inputs["step"] != "post-exchange":
         return default
 
     dice_roll = uniform(0.1, 0.9)
 
-    agents = sys_params["agents"]
+    agents = current_state["agents"]
     i_claimer = -1
     for i_agent in range(0, len(agents) - 1):
-        if current_state["deposited"][agents[i_agent]] > 0:
+        if current_state["deposited"][agents[i_agent]["address"]] > 0:
             i_claimer = i_agent
             break
 
@@ -349,23 +349,39 @@ def claimMTokens(
         return default
 
     claimer_address = agents[i_claimer]["address"]
-    if current_state["deposited"][claimer_address] == 0:
+
+    mTokensClaimed = current_state["mTokensClaimed"].copy()
+    mTokensClaimed[claimer_address] = True
+
+    return ("mTokensClaimed", mTokensClaimed)
+
+
+def claimMTokens_credit_funder(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    default = ("agents", current_state["agents"])
+    if policy_inputs["step"] != "post-exchange":
         return default
 
-    if current_state["mtokensClaimed"][claimer_address]:
-        return default
-    # current_state["mtokensClaimed"][claimer_address] = True
+    agents = current_state["agents"].copy()
+    i_claimer = -1
+    for i_agent in range(0, len(agents) - 1):
+        if current_state["mTokensClaimed"][agents[i_agent]["address"]]:
+            i_claimer = i_agent
+            break
 
-    sys_params["agents"][i_claimer]["mDAO"] += (
+    claimer_address = agents[i_claimer]["address"]
+    agents[i_claimer]["mDAO"] += (
         current_state["deposited"][claimer_address]
-        * 10 ** sys_params["mToken_decimals"][0]
-        / sys_params["exchange_rate"][0]
+        * 10 ** sys_params["mToken_decimals"]
+        / sys_params["exchange_rate"]
     )
 
-    return (
-        "mtokensClaimed",
-        current_state["mtokensClaimed"].update({claimer_address: True}),
-    )
+    return ("agents", agents)
 
 
 def vote_liquidate(

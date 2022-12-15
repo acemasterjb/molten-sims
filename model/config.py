@@ -11,7 +11,7 @@ del configs[:]
 sim_config = config_sim(
     {
         "N": 1,  # no. of sim runs
-        "T": range(1),  # no. of timesteps; 14s * 5 blocks
+        "T": range(1),  # no. of times to run through PSUBs
         "M": params,
     }
 )

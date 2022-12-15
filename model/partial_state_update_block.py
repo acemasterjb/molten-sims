@@ -1,6 +1,7 @@
 from .mechanisms import (
     claim,
-    claimMTokens,
+    claimMTokens_set_claimed,
+    claimMTokens_credit_funder,
     deposit_and_deplete_DAI,
     deposit_and_update_total,
     deposit_into_funder_account,
@@ -29,11 +30,11 @@ from .policies import (
 
 block_step_1 = [
     {
-        "policies": {"deposit_policy": deposit_policy},
+        "policies": {"action": deposit_policy},
         "variables": {
-            "step_1": deposit_into_funder_account,
-            "step_2": deposit_and_deplete_DAI,
-            "step_3": deposit_and_update_total,
+            "deposited": deposit_into_funder_account,
+            "agents": deposit_and_deplete_DAI,
+            "totalDeposited": deposit_and_update_total,
         },
     }
     for _ in range(0, 9)
@@ -41,11 +42,11 @@ block_step_1 = [
 
 block_step_2 = [
     {
-        "policies": {"refund_policy": refund_policy},
+        "policies": {"action": refund_policy},
         "variables": {
-            "step_1": refund_funder_account,
-            "step_2": refund_and_credit_DAI,
-            "step_3": refund_and_update_total,
+            "deposited": refund_funder_account,
+            "agents": refund_and_credit_DAI,
+            "totalDeposited": refund_and_update_total,
         },
     }
     for _ in range(0, 9)
@@ -53,22 +54,25 @@ block_step_2 = [
 
 block_step_3 = [
     {
-        "policies": {"exchange_policy": exchange_policy},
+        "policies": {"action": exchange_policy},
         "variables": {
-            "step_1": exchange_set_exchange_time,
-            "step_2": exchange_send_mTokens,
-            "step_3": exchange_transfer_to_dao,
-            "step_1": exchange_charge_dao,
-            "step_2": exchange_transfer_to_molten,
-            "step_3": exchange_receive_deposit_token,
+            "exchangeTime": exchange_set_exchange_time,
+            "mToken_balance": exchange_send_mTokens,
+            "DAO_treasury": exchange_transfer_to_dao,
+            "daoToken_balance": exchange_charge_dao,
+            "DAO_treasury": exchange_transfer_to_molten,
+            "totalDeposited": exchange_receive_deposit_token,
         },
     }
 ]
 
 block_step_4 = [
     {
-        "policies": {"claimMTokens_policy": claimMTokens_policy},
-        "variables": {"step_1": claimMTokens},
+        "policies": {"action": claimMTokens_policy},
+        "variables": {
+            "mTokensClaimed": claimMTokens_set_claimed,
+            "agents": claimMTokens_credit_funder,
+        },
     }
     for _ in range(0, 9)
 ]
@@ -97,8 +101,8 @@ block_steps = [
     block_step_2,
     block_step_3,
     block_step_4,
-    block_step_5,
-    block_step_6,
+    # block_step_5,
+    # block_step_6,
 ]
 partial_state_update_block = []
 
