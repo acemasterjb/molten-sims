@@ -40,14 +40,30 @@ def refund_policy(
     _,
     current_state: dict[str, Any],
 ):
+    default = {"step": "continue"}
     if current_state["exchangeTime"] == 0:
-        agents: list[dict[str, Any]] = current_state["agents"]
-        agents_to_keep = []
+        dice_roll = uniform(0.1, 0.9)
+
+        agents = current_state["agents"].copy()
+        current_deposits = current_state["deposited"]
+        agents_to_keep: list[dict[str, Any]] = []
+
         for agent in agents:
-            if agent["DAI"] == 0:
+            agent_address = agent["address"]
+            deposit_criteria_met = (
+                agent["DAI"] == 0
+                and current_deposits[agent_address] > 0
+                and agent["probabilities"]["refund"] >= dice_roll
+            )
+
+            if deposit_criteria_met:
                 agents_to_keep.append(agent)
-        return {"step": "depositing", "agents": agents_to_keep}
-    return {"step": "continue"}
+
+        if len(agents_to_keep) > 0:
+            return {"step": "depositing", "agents": agents_to_keep}
+        else:
+            return default
+    return default
 
 
 def exchange_policy(
