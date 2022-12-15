@@ -6,7 +6,6 @@ from .mechanisms import (
     deposit_and_deplete_DAI,
     deposit_and_update_total,
     deposit_into_funder_account,
-    exchange_charge_dao,
     exchange_send_mTokens,
     exchange_set_exchange_time,
     exchange_transfer_to_dao,
@@ -60,8 +59,7 @@ block_step_3 = [
             "exchangeTime": exchange_set_exchange_time,
             "mToken_balance": exchange_send_mTokens,
             "DAO_treasury": exchange_transfer_to_dao,
-            "daoToken_balance": exchange_charge_dao,
-            "DAO_treasury": exchange_transfer_to_molten,
+            "daoToken_balance": exchange_transfer_to_molten,
         },
     }
 ]
