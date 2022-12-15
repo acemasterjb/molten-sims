@@ -218,7 +218,7 @@ def exchange_set_exchange_time(
     current_state: dict[str, Any],
     policy_inputs: dict[str, Any],
 ):
-    if policy_inputs["step"] is not "exchanging":
+    if policy_inputs["step"] != "exchanging":
         return ("exchangeTime", current_state["exchangeTime"])
 
     return ("exchangeTime", datetime.utcnow().replace(microsecond=0).timestamp())
@@ -302,22 +302,7 @@ def exchange_charge_dao(
     treasury = current_state["DAO_treasury"].copy()
     treasury["daoToken_balance"] -= dao_token_balance_delta
 
-    # print(dao_token_balance_delta)
-
     return ("DAO_treasury", treasury)
-
-
-def exchange_receive_deposit_token(
-    sys_params: dict[str, Any],
-    substep: int,
-    _,
-    current_state: dict[str, Any],
-    policy_inputs: dict[str, Any],
-):
-    if policy_inputs["step"] != "exchanging":
-        return ("daoToken_balance", current_state["daoToken_balance"])
-
-    return ("totalDeposited", 0)
 
 
 def claimMTokens_set_claimed(
@@ -384,7 +369,30 @@ def claimMTokens_credit_funder(
     return ("agents", agents)
 
 
-def vote_liquidate(
+def vote_liquidate_update_total(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    default = ("totalVotedForLiquidation", current_state["totalVotedForLiquidation"])
+    if policy_inputs["step"] != "post-exchange":
+        return default
+
+    agents = policy_inputs["agents"]
+    voter = agents[-1]
+
+    voter_address = voter["address"]
+    total_voted_for_liquidation = current_state["totalVotedForLiquidation"]
+
+    return (
+        "totalVotedForLiquidation",
+        total_voted_for_liquidation + current_state["deposited"][voter_address],
+    )
+
+
+def vote_liquidate_set_voted(
     sys_params: dict[str, Any],
     substep: int,
     _,
@@ -395,36 +403,14 @@ def vote_liquidate(
     if policy_inputs["step"] != "post-exchange":
         return default
 
-    dice_roll = uniform(0.1, 0.9)
-
-    agents = sys_params["agents"]
-    i_voter = -1
-    for i_agent in range(0, len(agents) - 1):
-        agent = agents[i_agent]
-        if not current_state["votedForLiquidation"][agent["address"]]:
-            i_voter = i_agent
-            break
-
-    if i_voter < 0:
-        return default
-
-    voter = agents[i_voter]
-    agent_opts_to_not_vote = voter["probabilities"]["liquidate"] < dice_roll
-    if agent_opts_to_not_vote:
-        return default
+    voted_for_liquidation = current_state["votedForLiquidation"].copy()
+    agents = policy_inputs["agents"]
+    voter = agents[-1]
 
     voter_address = voter["address"]
-    if current_state["deposited"][voter_address] == 0:
-        return default
+    voted_for_liquidation[voter_address] = True
 
-    current_state["totalVotedForLiquidation"] += current_state["deposited"][
-        voter_address
-    ]
-
-    return (
-        "votedForLiquidation",
-        current_state["votedForLiquidation"].update({voter_address: True}),
-    )
+    return ("votedForLiquidation", voted_for_liquidation)
 
 
 def liquidate(
@@ -434,7 +420,7 @@ def liquidate(
     current_state: dict[str, Any],
     policy_inputs: dict[str, Any],
 ):
-    if policy_inputs["step"] != "unanimous liquidation vote":
+    if policy_inputs["substep"] != "unanimous liquidation vote":
         return ("liquidationTime", current_state["liquidationTime"])
 
     return ("liquidationTime", datetime.utcnow().replace(microsecond=0).timestamp())
