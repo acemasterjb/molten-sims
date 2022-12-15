@@ -4,11 +4,11 @@ from typing import Any
 
 deployed_timestamp = datetime.utcnow().replace(microsecond=0).timestamp()
 n_agents = 10
-init_bool_state = {f"0x0{n}": False for n in range(2, n_agents + 1)}
+init_bool_state = {f"0x0{n}": False for n in range(2, n_agents + 2)}
 
 genesis_state = {
     "block_timestamp": deployed_timestamp,
-    "deposited": {f"0x0{n}": 0 for n in range(2, n_agents + 1)},
+    "deposited": {f"0x0{n}": 0 for n in range(2, n_agents + 2)},
     "totalDeposited": 0,
     "exchangeTime": 0,
     "lockingDuration": 0,
@@ -20,7 +20,7 @@ genesis_state = {
     "daoToken_balance": 0,
     "DAO_treasury": {
         "address": "0x01",
-        "daoToken_balance": 2e9 * 10 ** 18,
+        "daoToken_balance": 2e9 * 10**18,
         "depositToken_balance": 0,
     },
     "agents": [],
@@ -28,7 +28,7 @@ genesis_state = {
 
 
 def init_state(n_agents: int = 10) -> dict[str, Any]:
-    for i_agent in range(0, n_agents - 1):
+    for i_agent in range(0, n_agents):
         genesis_state["agents"].append(
             {
                 "address": f"0x0{i_agent + 2}",

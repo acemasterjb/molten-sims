@@ -6,7 +6,6 @@ from .mechanisms import (
     deposit_and_update_total,
     deposit_into_funder_account,
     exchange_charge_dao,
-    exchange_receive_deposit_token,
     exchange_send_mTokens,
     exchange_set_exchange_time,
     exchange_transfer_to_dao,
@@ -15,7 +14,8 @@ from .mechanisms import (
     refund_and_credit_DAI,
     refund_and_update_total,
     refund_funder_account,
-    vote_liquidate,
+    vote_liquidate_set_voted,
+    vote_liquidate_update_total,
 )
 
 from .policies import (
@@ -61,7 +61,6 @@ block_step_3 = [
             "DAO_treasury": exchange_transfer_to_dao,
             "daoToken_balance": exchange_charge_dao,
             "DAO_treasury": exchange_transfer_to_molten,
-            "totalDeposited": exchange_receive_deposit_token,
         },
     }
 ]
@@ -80,10 +79,14 @@ block_step_4 = [
 block_step_5 = [
     {
         "policies": {
-            "vote_liquidate_policicy": vote_liquidate_policy,
-            "liquidate_policy": liquidate_policy,
+            "action": vote_liquidate_policy,
+            "action_2": liquidate_policy,
         },
-        "variables": {"step_1": vote_liquidate, "step_2": liquidate},
+        "variables": {
+            "totalVotedForLiquidation": vote_liquidate_update_total,
+            "votedForLiquidation": vote_liquidate_set_voted,
+            "liquidationTime": liquidate,
+        },
     }
     for _ in range(0, 9)
 ]
@@ -101,7 +104,7 @@ block_steps = [
     block_step_2,
     block_step_3,
     block_step_4,
-    # block_step_5,
+    block_step_5,
     # block_step_6,
 ]
 partial_state_update_block = []
