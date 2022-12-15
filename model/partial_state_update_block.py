@@ -1,5 +1,6 @@
 from .mechanisms import (
-    claim,
+    claim_update_funder_balances,
+    claim_update_molten_mToken_balance,
     claimMTokens_set_claimed,
     claimMTokens_credit_funder,
     deposit_and_deplete_DAI,
@@ -94,7 +95,10 @@ block_step_5 = [
 block_step_6 = [
     {
         "policies": {"claim_policy": claim_policy},
-        "variables": {"step_1": claim},
+        "variables": {
+            "agents": claim_update_funder_balances,
+            "mToken_balance": claim_update_molten_mToken_balance,
+        },
     }
     for _ in range(0, 9)
 ]
@@ -105,7 +109,7 @@ block_steps = [
     block_step_3,
     block_step_4,
     block_step_5,
-    # block_step_6,
+    block_step_6,
 ]
 partial_state_update_block = []
 

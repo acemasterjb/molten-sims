@@ -426,7 +426,37 @@ def liquidate(
     return ("liquidationTime", datetime.utcnow().replace(microsecond=0).timestamp())
 
 
-def claim(
+def claim_update_funder_balances(
+    sys_params: dict[str, Any],
+    substep: int,
+    _,
+    current_state: dict[str, Any],
+    policy_inputs: dict[str, Any],
+):
+    default = ("agents", current_state["agents"])
+    if policy_inputs["step"] != "post-liquidation":
+        return default
+
+    agents = policy_inputs["agents"].copy()
+    claimer_address = agents[-1]["address"]
+    mToken_balance = agents[-1]["mDAO"]
+
+    unclaimed_mToken_balance = (
+        0
+        if current_state["mTokensClaimed"][claimer_address]
+        else current_state["deposited"][claimer_address]
+        * 10 ** sys_params["mToken_decimals"]
+        / sys_params["exchangeRate"]
+    )
+    claimable_balance = mToken_balance + unclaimed_mToken_balance
+
+    agents[-1]["mDAO"] = 0
+    agents[-1]["DAO"] += claimable_balance
+
+    return ("agents", agents)
+
+
+def claim_update_molten_mToken_balance(
     sys_params: dict[str, Any],
     substep: int,
     _,
@@ -437,39 +467,17 @@ def claim(
     if policy_inputs["step"] != "post-liquidation":
         return default
 
-    dice_roll = uniform(0.1, 0.9)
+    agents = policy_inputs["agents"].copy()
 
-    agents = sys_params["agents"]
-    i_claimer = -1
-    for i_agent in range(0, len(agents) - 1):
-        if agents[i_agent]["DAO"] == 0:
-            i_claimer = -1
-            break
+    claimer_address = agents[-1]["address"]
 
-    if i_claimer == -1:
-        return default
-
-    claimer = agents[i_claimer]
-    agent_opts_to_not_claim = claimer["probabilities"]["claim"] < dice_roll
-    if agent_opts_to_not_claim:
-        return default
-
-    claimer_address = claimer["address"]
-    mToken_balance = claimer["mDAO"]
     unclaimed_mToken_balance = (
         0
         if current_state["mTokensClaimed"][claimer_address]
         else current_state["deposited"][claimer_address]
-        * 10 ** sys_params["mToken_decimals"][0]
-        / sys_params["exchangeRate"][0]
+        * 10 ** sys_params["mToken_decimals"]
+        / sys_params["exchangeRate"]
     )
-
-    claimable_balance = mToken_balance + unclaimed_mToken_balance
-    if claimable_balance == 0:
-        return default
-
-    sys_params["agents"][i_claimer]["mDAO"] = 0
-    sys_params["agents"][i_claimer]["DAO"] += claimable_balance
 
     return (
         "mToken_balance",
