@@ -16,30 +16,10 @@ def deposit_into_funder_account(
     if policy_inputs["step"] != "depositing":
         return default
 
-    dice_roll = uniform(0.1, 0.9)
-
-    agents: list[dict[str, Any]] = current_state["agents"]
+    agents: list[dict[str, Any]] = policy_inputs["agents"]
     current_deposits = current_state["deposited"].copy()
 
-    i_funder = -1
-    for i_agent in range(0, len(agents) - 1):
-        agent_address = agents[i_agent]["address"]
-
-        substep_criteria_met = (
-            agents[i_agent]["DAI"] > 0 and current_deposits[agent_address] == 0
-        )
-        if substep_criteria_met:
-            i_funder = i_agent
-            break
-
-    if i_funder < 0:
-        return default
-
-    depositer = agents[i_funder]
-    agent_opts_to_not_deposit = depositer["probabilities"]["deposit"] < dice_roll
-    if agent_opts_to_not_deposit:
-        return default
-
+    depositer = agents[-1]
     funder_address = depositer["address"]
     deposit_amount = depositer["DAI"]
 
@@ -61,22 +41,12 @@ def deposit_and_deplete_DAI(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = current_state["agents"].copy()
-    i_funder = -1
-    for i_agent in range(0, len(agents) - 1):
-        substep_criteria_met = (
-            agents[i_agent]["DAI"] > 0
-            and current_state["deposited"][agents[i_agent]["address"]] > 0
-        )
-        if substep_criteria_met:
-            i_funder = i_agent
-            break
+    agents: list[dict[str, Any]] = policy_inputs["agents"].copy()
+    current_agents: list[dict[str, Any]] = current_state["agents"].copy()
 
-    if i_funder < 0:
-        return default
-
-    agents[i_funder]["DAI"] = 0
-    return ("agents", agents)
+    i_agent = current_agents.index(agents[-1])
+    current_agents[i_agent].update({"DAI": 0})
+    return ("agents", current_agents)
 
 
 def deposit_and_update_total(
@@ -90,21 +60,11 @@ def deposit_and_update_total(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = current_state["agents"]
-    i_funder = -1
-    for i_agent in range(0, len(agents) - 1):
-        substep_criteria_met = (
-            current_state["agents"][i_agent]["DAI"] == 0
-            and current_state["deposited"][agents[i_agent]["address"]] > 0
-        )
-        if substep_criteria_met:
-            i_funder = i_agent
-            break
+    agents: list[dict[str, Any]] = policy_inputs["agents"]
+    current_agents: list[dict[str, Any]] = current_state["agents"]
+    i_agent = current_agents.index(agents[-1])
 
-    if i_funder < 0:
-        return default
-
-    deposit_amount = initial_state["agents"][i_funder]["DAI"]
+    deposit_amount = initial_state["agents"][i_agent]["DAI"]
 
     return ("totalDeposited", current_state["totalDeposited"] + deposit_amount)
 
