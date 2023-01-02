@@ -1,5 +1,4 @@
 from copy import deepcopy
-from datetime import datetime
 from typing import Any
 
 
@@ -57,4 +56,4 @@ def liquidate_tokens(
     if policy_inputs["substep"] != "unanimous liquidation vote":
         return ("liquidationTime", current_state["liquidationTime"])
 
-    return ("liquidationTime", datetime.utcnow().replace(microsecond=0).timestamp())
+    return ("liquidationTime", substep)

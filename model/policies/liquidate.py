@@ -22,7 +22,11 @@ def vote_liquidate_policy(
         if agent_will_vote:
             agents_to_keep.append(agents[i_agent])
 
-    if len(agents_to_keep) > 0 and current_state["exchangeTime"] > 0:
+    if (
+        len(agents_to_keep) > 0
+        and current_state["exchangeTime"] > 0
+        and substep >= current_state["exchangeTime"] + current_state["lockingDuration"]
+    ):
         return {"step": "post-exchange", "agents": agents_to_keep}
     else:
         return default
@@ -36,8 +40,8 @@ def liquidate_policy(
 ):
     criteria_for_liquidation_met = (
         current_state["totalDeposited"] == current_state["totalVotedForLiquidation"]
+        and substep >= current_state["exchangeTime"] + current_state["lockingDuration"]
     )
     if criteria_for_liquidation_met:
         return {"substep": "unanimous liquidation vote"}
     return {"substep": "continue"}
-
