@@ -1,5 +1,4 @@
 from copy import deepcopy
-from datetime import datetime
 from typing import Any
 
 
@@ -13,7 +12,7 @@ def exchange_set_exchange_time(
     if policy_inputs["step"] != "exchanging":
         return ("exchangeTime", current_state["exchangeTime"])
 
-    return ("exchangeTime", datetime.utcnow().replace(microsecond=0).timestamp())
+    return ("exchangeTime", substep)
 
 
 def exchange_send_mTokens(
