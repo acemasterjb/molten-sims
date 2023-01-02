@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from random import uniform
 from typing import Any
@@ -17,11 +18,11 @@ def deposit_into_funder_account(
         return default
 
     agents: list[dict[str, Any]] = policy_inputs["agents"]
-    current_deposits = current_state["deposited"].copy()
+    current_deposits: dict[bytes, int] = deepcopy(current_state["deposited"])
 
     depositer = agents[-1]
-    funder_address = depositer["address"]
-    deposit_amount = depositer["DAI"]
+    funder_address: bytes = depositer["address"]
+    deposit_amount: int = depositer["DAI"]
 
     current_deposits.update(
         {funder_address: current_deposits[funder_address] + deposit_amount}
@@ -41,8 +42,8 @@ def deposit_and_deplete_DAI(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = policy_inputs["agents"].copy()
-    current_agents: list[dict[str, Any]] = current_state["agents"].copy()
+    agents: list[dict[str, Any]] = policy_inputs["agents"]
+    current_agents: list[dict[str, Any]] = deepcopy(current_state["agents"])
 
     i_agent = current_agents.index(agents[-1])
     current_agents[i_agent].update({"DAI": 0})
@@ -81,11 +82,11 @@ def refund_funder_account(
         return default
 
     agents: list[dict[str, Any]] = policy_inputs["agents"]
-    current_deposits = current_state["deposited"].copy()
+    current_deposits: dict[bytes, int] = deepcopy(current_state["deposited"])
 
     depositer = agents[-1]
-    funder_address = depositer["address"]
-    deposit_amount = depositer["DAI"]
+    funder_address: bytes = depositer["address"]
+    deposit_amount: int = depositer["DAI"]
 
     current_deposits.update(
         {funder_address: current_deposits[funder_address] - deposit_amount}
@@ -105,8 +106,8 @@ def refund_and_credit_DAI(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = policy_inputs["agents"].copy()
-    current_agents: list[dict[str, Any]] = current_state["agents"].copy()
+    agents: list[dict[str, Any]] = policy_inputs["agents"]
+    current_agents: list[dict[str, Any]] = deepcopy(current_state["agents"])
 
     i_agent = current_agents.index(agents[-1])
     current_agents[i_agent].update({"DAI": initial_state["agents"][i_agent]["DAI"]})
@@ -125,10 +126,10 @@ def refund_and_update_total(
         return default
 
     agents: list[dict[str, Any]] = policy_inputs["agents"]
-    current_agents: list[dict[str, Any]] = current_state["agents"]
+    current_agents: list = current_state["agents"]
     i_agent = current_agents.index(agents[-1])
 
-    deposit_amount = initial_state["agents"][i_agent]["DAI"]
+    deposit_amount: int = initial_state["agents"][i_agent]["DAI"]
 
     return ("totalDeposited", current_state["totalDeposited"] - deposit_amount)
 
@@ -183,7 +184,7 @@ def exchange_transfer_to_dao(
         / sys_params["exchange_rate"]
     )
 
-    treasury = current_state["DAO_treasury"].copy()
+    treasury = deepcopy(current_state["DAO_treasury"])
     treasury["depositToken_balance"] += total_deposited
     treasury["daoToken_balance"] -= dao_token_balance_delta
 
@@ -241,9 +242,9 @@ def claimMTokens_set_claimed(
     if agent_opts_to_not_claim:
         return default
 
-    claimer_address = agents[i_claimer]["address"]
+    claimer_address: bytes = agents[i_claimer]["address"]
 
-    mTokensClaimed = current_state["mTokensClaimed"].copy()
+    mTokensClaimed: dict[bytes, bool] = deepcopy(current_state["mTokensClaimed"])
     mTokensClaimed[claimer_address] = True
 
     return ("mTokensClaimed", mTokensClaimed)
@@ -260,7 +261,7 @@ def claimMTokens_credit_funder(
     if policy_inputs["step"] != "post-exchange":
         return default
 
-    agents = current_state["agents"].copy()
+    agents = deepcopy(current_state["agents"])
     i_claimer = -1
     for i_agent in range(0, len(agents) - 1):
         if current_state["mTokensClaimed"][agents[i_agent]["address"]]:
@@ -311,7 +312,7 @@ def vote_liquidate_set_voted(
     if policy_inputs["step"] != "post-exchange":
         return default
 
-    voted_for_liquidation = current_state["votedForLiquidation"].copy()
+    voted_for_liquidation = deepcopy(current_state["votedForLiquidation"])
     agents = policy_inputs["agents"]
     voter = agents[-1]
 
@@ -345,7 +346,7 @@ def claim_update_funder_balances(
     if policy_inputs["step"] != "post-liquidation":
         return default
 
-    agents = policy_inputs["agents"].copy()
+    agents = deepcopy(policy_inputs["agents"])
     claimer_address = agents[-1]["address"]
     mToken_balance = agents[-1]["mDAO"]
 
@@ -375,7 +376,7 @@ def claim_update_molten_mToken_balance(
     if policy_inputs["step"] != "post-liquidation":
         return default
 
-    agents = policy_inputs["agents"].copy()
+    agents = policy_inputs["agents"]
 
     claimer_address = agents[-1]["address"]
 
