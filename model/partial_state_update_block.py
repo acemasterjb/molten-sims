@@ -10,7 +10,7 @@ from .mechanisms import (
     exchange_set_exchange_time,
     exchange_transfer_to_dao,
     exchange_transfer_to_molten,
-    liquidate,
+    liquidate_tokens,
     refund_and_credit_DAI,
     refund_and_update_total,
     refund_funder_account,
@@ -84,7 +84,7 @@ block_step_5 = [
         "variables": {
             "totalVotedForLiquidation": vote_liquidate_update_total,
             "votedForLiquidation": vote_liquidate_set_voted,
-            "liquidationTime": liquidate,
+            "liquidationTime": liquidate_tokens,
         },
     }
     for _ in range(0, 9)
