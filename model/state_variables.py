@@ -38,7 +38,6 @@ def init_state(n_agents: int = 10) -> dict[str, Any]:
                 "probabilities": {
                     "deposit": uniform(0.1, 0.9),
                     "refund": uniform(0.1, 0.2),
-                    "claimMTokens": uniform(0.1, 0.9),
                     "liquidate": uniform(0.1, 0.4),
                     "claim": uniform(0.1, 0.9),
                 },

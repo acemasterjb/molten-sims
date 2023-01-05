@@ -1,5 +1,4 @@
 from copy import deepcopy
-from random import uniform
 from typing import Any
 
 
@@ -14,24 +13,8 @@ def claimMTokens_set_claimed(
     if policy_inputs["step"] != "post-exchange":
         return default
 
-    dice_roll = uniform(0.1, 0.9)
-
-    agents = current_state["agents"]
-    i_claimer = -1
-    for i_agent in range(0, len(agents) - 1):
-        if current_state["deposited"][agents[i_agent]["address"]] > 0:
-            i_claimer = i_agent
-            break
-
-    if i_claimer < 0:
-        return default
-
-    claimer = agents[i_claimer]
-    agent_opts_to_not_claim = claimer["probabilities"]["claimMTokens"] < dice_roll
-    if agent_opts_to_not_claim:
-        return default
-
-    claimer_address: bytes = agents[i_claimer]["address"]
+    agents = policy_inputs["agents"]
+    claimer_address: bytes = agents[-1]["address"]
 
     mTokensClaimed: dict[bytes, bool] = deepcopy(current_state["mTokensClaimed"])
     mTokensClaimed[claimer_address] = True
@@ -50,18 +33,14 @@ def claimMTokens_credit_funder(
     if policy_inputs["step"] != "post-exchange":
         return default
 
-    agents = deepcopy(current_state["agents"])
-    i_claimer = -1
-    for i_agent in range(0, len(agents) - 1):
-        if current_state["mTokensClaimed"][agents[i_agent]["address"]]:
-            i_claimer = i_agent
-            break
+    current_agents: list[dict] = deepcopy(current_state["agents"])
+    i_agent = current_agents.index(policy_inputs["agents"][-1])
+    claimer_address = current_agents[i_agent]["address"]
 
-    claimer_address = agents[i_claimer]["address"]
-    agents[i_claimer]["mDAO"] += (
+    current_agents[i_agent]["mDAO"] += (
         current_state["deposited"][claimer_address]
         * 10 ** sys_params["mToken_decimals"]
         / sys_params["exchange_rate"]
     )
 
-    return ("agents", agents)
+    return ("agents", current_agents)
