@@ -28,11 +28,11 @@ genesis_state = {
 
 
 def init_state(n_agents: int = 10) -> dict[str, Any]:
-    for i_agent in range(0, n_agents):
+    for i_agent in range(n_agents):
         genesis_state["agents"].append(
             {
                 "address": (i_agent + 2).to_bytes(2, "big"),
-                "DAI": randint(1e3, 9.99e6),
+                "DAI": randint(1e21, 9.99e24),
                 "mDAO": 0,
                 "DAO": 0,
                 "probabilities": {

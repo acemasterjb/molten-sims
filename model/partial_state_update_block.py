@@ -37,7 +37,7 @@ block_step_1 = [
             "totalDeposited": deposit_and_update_total,
         },
     }
-    for _ in range(0, 9)
+    for _ in range(10)
 ]
 
 block_step_2 = [
@@ -49,7 +49,7 @@ block_step_2 = [
             "totalDeposited": refund_and_update_total,
         },
     }
-    for _ in range(0, 9)
+    for _ in range(10)
 ]
 
 block_step_3 = [
@@ -72,7 +72,7 @@ block_step_4 = [
             "agents": claimMTokens_credit_funder,
         },
     }
-    for _ in range(0, 9)
+    for _ in range(10)
 ]
 
 block_step_5 = [
@@ -87,7 +87,7 @@ block_step_5 = [
             "liquidationTime": liquidate_tokens,
         },
     }
-    for _ in range(0, 9)
+    for _ in range(10)
 ]
 
 block_step_6 = [
@@ -98,7 +98,7 @@ block_step_6 = [
             "mToken_balance": claim_update_molten_mToken_balance,
         },
     }
-    for _ in range(0, 9)
+    for _ in range(10)
 ]
 
 block_steps = [
