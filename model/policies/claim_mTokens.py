@@ -14,11 +14,11 @@ def claimMTokens_policy(
     agents = current_state["agents"]
     agents_to_keep: list[dict[str, Any]] = []
     mTokensClaimed: dict[bytes, bool] = current_state["mTokensClaimed"]
-    deposits = current_state["deposited"]
+    current_deposits = current_state["deposited"]
 
     for agent in agents:
         criteria_to_claim_met = (
-            deposits[agent["address"]] > 0
+            current_deposits[agent["address"]] > 0
             and not mTokensClaimed[agent["address"]]
         )
 
