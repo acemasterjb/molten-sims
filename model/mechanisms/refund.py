@@ -15,15 +15,14 @@ def refund_funder_account(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = policy_inputs["agents"]
+    agent_payloads: list[tuple[dict[str, Any], int]] = policy_inputs["agents"]
     current_deposits: dict[bytes, int] = deepcopy(current_state["deposited"])
 
-    depositer = agents[-1]
+    depositer, refund_amount = agent_payloads[-1]
     funder_address: bytes = depositer["address"]
-    deposit_amount: int = depositer["DAI"]
 
     current_deposits.update(
-        {funder_address: current_deposits[funder_address] - deposit_amount}
+        {funder_address: current_deposits[funder_address] - refund_amount}
     )
 
     return ("deposited", current_deposits)
@@ -40,10 +39,11 @@ def refund_and_credit_DAI(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = policy_inputs["agents"]
+    agent_payload: list[tuple[dict[str, Any], int]] = policy_inputs["agents"]
     current_agents: list[dict[str, Any]] = deepcopy(current_state["agents"])
 
-    i_agent = current_agents.index(agents[-1])
+    agent, _ = agent_payload[-1]
+    i_agent = current_agents.index(agent)
     current_agents[i_agent].update({"DAI": initial_state["agents"][i_agent]["DAI"]})
     return ("agents", current_agents)
 
@@ -59,9 +59,10 @@ def refund_and_update_total(
     if policy_inputs["step"] != "depositing":
         return default
 
-    agents: list[dict[str, Any]] = policy_inputs["agents"]
+    agent_payload: list[tuple[dict[str, Any], int]] = policy_inputs["agents"]
     current_agents: list = current_state["agents"]
-    i_agent = current_agents.index(agents[-1])
+    agent, _ = agent_payload[-1]
+    i_agent = current_agents.index(agent)
 
     deposit_amount: int = initial_state["agents"][i_agent]["DAI"]
 
