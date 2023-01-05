@@ -22,7 +22,7 @@ def claim_update_funder_balances(
         if current_state["mTokensClaimed"][claimer_address]
         else current_state["deposited"][claimer_address]
         * 10 ** sys_params["mToken_decimals"]
-        / sys_params["exchangeRate"]
+        / sys_params["exchange_rate"]
     )
     claimable_balance = mToken_balance + unclaimed_mToken_balance
 
@@ -52,7 +52,7 @@ def claim_update_molten_mToken_balance(
         if current_state["mTokensClaimed"][claimer_address]
         else current_state["deposited"][claimer_address]
         * 10 ** sys_params["mToken_decimals"]
-        / sys_params["exchangeRate"]
+        / sys_params["exchange_rate"]
     )
 
     return (
